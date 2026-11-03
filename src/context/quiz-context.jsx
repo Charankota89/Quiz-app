@@ -1,35 +1,28 @@
-import React, { createContext, useState } from "react";
+import { useState, useEffect } from "react";
+import { QuizContext } from "./QuizContext";
+import { quizData } from "../data/quiz-data";
 
-// Create a Context for the quiz
-export const QuizContext = createContext();
+export { QuizContext };
 
-// QuizProvider component wraps our app and provides quiz state and methods
 export const QuizProvider = ({ children }) => {
-  // Sample quiz questions stored as an array of objects
-  const quizData = [
-    {
-      question: "What is the capital of France?",
-      options: ["Berlin", "London", "Paris", "Rome"],
-      answer: "Paris",
-    },
-    {
-      question: "Which language is used for web apps?",
-      options: ["PHP", "Python", "Javascript", "All"],
-      answer: "All",
-    },
-    {
-      question: "Who is the current CEO of Tesla?",
-      options: ["Jeff Bezos", "Elon Musk", "Bill Gates", "Tony Stark"],
-      answer: "Elon Musk",
-    },
-  ];
-
-  // Initialize userAnswers as an array with a null value for each question
-  const initialAnswers = quizData.map(() => null);
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [userAnswers, setUserAnswers] = useState(initialAnswers);
+  const [userAnswers, setUserAnswers] = useState(() => quizData.map(() => null));
+  const [timerSeconds, setTimerSeconds] = useState(0);
 
-  // Function to update the answer for a given question index
+  const isCompleted = currentQuestion >= quizData.length;
+
+  // Track elapsed time while quiz is in progress
+  useEffect(() => {
+    if (isCompleted) return;
+
+    const intervalId = setInterval(() => {
+      setTimerSeconds((prev) => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isCompleted]);
+
+  // Update answer for a specific question
   const setAnswerForQuestion = (index, answer) => {
     setUserAnswers((prevAnswers) => {
       const newAnswers = [...prevAnswers];
@@ -38,11 +31,18 @@ export const QuizProvider = ({ children }) => {
     });
   };
 
-  // Reset function to restart the quiz
+  // Reset quiz state
   const resetQuiz = () => {
     setCurrentQuestion(0);
     setUserAnswers(quizData.map(() => null));
+    setTimerSeconds(0);
   };
+
+  const score = quizData.reduce((acc, q, index) => {
+    return userAnswers[index] === q.answer ? acc + 1 : acc;
+  }, 0);
+
+  const answeredCount = userAnswers.filter((ans) => ans !== null).length;
 
   return (
     <QuizContext.Provider
@@ -53,6 +53,10 @@ export const QuizProvider = ({ children }) => {
         userAnswers,
         setAnswerForQuestion,
         resetQuiz,
+        score,
+        answeredCount,
+        timerSeconds,
+        isCompleted,
       }}
     >
       {children}
